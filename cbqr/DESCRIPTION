@@ -1,0 +1,13 @@
+Package: cbqr
+Title: Censored Bent Line Quantile Regression
+Version: 0.0.0.9000
+Authors@R: person("Jilei", "Lin", "jileil2@gwmail.gwu.edu", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0002-7147-9851"))
+Description: It implements the methodology censored bent line quantile regression. In the first step, it estimates an informative subset. In the second step, it estimates a bent line quantile regression model. The estimation of the change points is based on grid search, and the estimation of regression coeﬃcients is based on rq in the package quantreg. The standard errors and the interval estimates are provided.
+Author: Jilei Lin [aut, cre]
+Maintainer: Jilei Lin <jileil2@gwmail.gwu.edu>
+Depends: R (>= 3.1.0), mgcv, quantreg
+License: MIT + file LICENSE
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.2
