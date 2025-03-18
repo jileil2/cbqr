@@ -7,45 +7,40 @@
 #' @param tau quantile level
 #' @return bp.est estimates of change points
 
-bentQRgrid <- function (y, x, z, tau)
+t.search <- function (y, x, z, tau)
 {
-  checkfun <- function(u) {
+  checkloss <- function(u) {
     u * (tau - ifelse(u < 0, 1, 0))
   }
-  qnregprof <- function(y, x, z, tau) {
+  grid.search <- function(y, x, z, tau) {
     tt <- seq(quantile(x, 0.01), quantile(x, 0.99), length = 100)
     p <- ifelse(is.null(z), 0, ncol(as.matrix(z)))
     sst <- NULL
     bet <- matrix(0, length(tt), p + 3)
     for (kk in 1:length(tt)) {
       if (p == 0) {
-        datnew <- data.frame(y = y, x1 = x, x2 = pmax(x -
-                                                        tt[kk], 0))
+        datnew <- data.frame(y = y, x1 = x, x2 = pmax(x - tt[kk], 0))
       }
       else {
-        datnew <- data.frame(y = y, x1 = x, x2 = pmax(x -
-                                                        tt[kk], 0), z)
-        names(datnew) = c("y", "x1", "x2", paste0("z",
-                                                  1:p, seq = ""))
+        datnew <- data.frame(y = y, x1 = x, x2 = pmax(x - tt[kk], 0), z)
       }
       fit <- rq(y ~ ., tau = tau, data = datnew, method = "br")
       bet[kk, ] <- fit$coef
-      sst[kk] <- sum(checkfun(fit$residuals))
+      sst[kk] <- sum(checkloss(fit$residuals))
     }
-    bp.grid <- min(tt[sst == min(sst)])
-    bet.grid <- bet[tt == bp.grid, ]
-    return(list(bet = bet.grid, bp = bp.grid))
+    t.hat <- min(tt[sst == min(sst)])
+    return(list(t.hat = t.hat))
   }
-  fit.grid <- qnregprof(y, x, z, tau)
-  bp.est <- fit.grid$bp
-  return(list(bp.est = bp.est))
+  grid <- grid.search(y, x, z, tau)
+  t.hat <- t.hat$bp
+  return(list(t.hat = t.hat))
 }
 
 
 #' Censored bent line quantile regression
 #'
 #'@description
-#' It implements the methodology censored bent line quantile regression Y^* = beta_1 t + beta_2 max(t - t_0, 0) + X gamma + epsilon, subject to censoring. In the first step, it estimates an informative subset. In the second step, it estimates a bent line quantile regression model. The estimation of the change points is based on grid search, and the estimation of regression coefficients is based on rq in the package quantreg. The standard errors and the interval estimates are provided with three options ('nid', 'ker', 'ks'). See details in summary.rq for 'nid' (quotient) and 'ker' (kernel density estimation). 'ks' considers a bias correction using the derived Bahadur representation for the residuals in kernel density estimation. For smaller sample sizes, 'ker' is more recommended as 'ks' may produce wide intervals occasionally.
+#' It implements the methodology censored bent line quantile regression Y^* = beta_1 t + beta_2 max(t - t_0, 0) + X gamma + epsilon, subject to censoring. In the first step, it estimates an informative subset, which is estimated by generalized additive model (GAM) with a probit link. In the second step, it estimates a bent line quantile regression model. The estimation of the change point is based on grid search, and the estimation of regression coefficients is based on rq in the package quantreg. The standard errors and the interval estimates are provided with three options ('nid', 'ker', 'ks'). See details in summary.rq for 'nid' (quotient) and 'ker' (kernel density estimation). 'ks' considers a bias correction using the derived Bahadur representation for the residuals in kernel density estimation. For smaller sample sizes, 'ker' is more recommended as 'ks' may produce wide intervals occasionally.
 #' @param cy the response (including the censored response)
 #' @param tt the covariate that may contain a change point
 #' @param xx the covariates that do not contain a change point
@@ -114,14 +109,12 @@ cbqr.gs <- function(cy, tt, xx, tau, delta, level = .05,
   xx.isub <- xx[ISUB.est, ]
 
   ## Bent QR with estimated ISUB
-  fit.grid <- bentQRgrid(y = cy[ISUB.est], z = xx.isub, x = tt.isub, tau)
-  bp.ini <- fit.grid$bp.est
-  mod.isub <- rq(cy ~ tt + pmax(tt - bp.ini, 0) + xx,
+  fit.grid <- t.search(y = cy[ISUB.est], z = xx.isub, x = tt.isub, tau)
+  t.hat <- fit.grid$t.hat
+  mod.isub <- rq(cy ~ tt + pmax(tt - t.hat, 0) + xx,
                  tau = tau, subset = ISUB.est,
                  method = "br")
 
-  # change point
-  t.hat <- bp.ini
   # slope estimates
   beta1.hat <- coef(mod.isub)[2]
   beta2.hat <- coef(mod.isub)[3]
